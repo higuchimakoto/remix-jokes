@@ -4,7 +4,7 @@ import { Link, useActionData, useSearchParams } from "@remix-run/react";
 import stylesUrl from "~/styles/login.css";
 import { db } from "~/utils/db.server";
 import { badRequest } from "~/utils/request.server";
-import { createUserSession, login } from "~/utils/session.server";
+import { createUserSession, login, register } from "~/utils/session.server";
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
@@ -62,8 +62,9 @@ export const action = async ({ request }: ActionArgs) => {
   }
 
   switch (loginType) {
-    case "login":
+    case "login": {
       const user = await login({ password, username });
+      console.log({ user });
       if (!user) {
         return badRequest({
           fieldErrors: null,
@@ -73,8 +74,8 @@ export const action = async ({ request }: ActionArgs) => {
       }
 
       return createUserSession(user.id, redirectTo);
-
-    case "register":
+    }
+    case "register": {
       const userExists = await db.user.findFirst({
         where: { username },
       });
@@ -87,17 +88,25 @@ export const action = async ({ request }: ActionArgs) => {
         });
       }
 
-      return badRequest({
-        fieldErrors: null,
-        fields,
-        formError: "not implemented ",
-      });
-    default:
+      const user = await register({ password, username });
+
+      if (!user) {
+        return badRequest({
+          fieldErrors: null,
+          fields,
+          formError: "not implemented ",
+        });
+      }
+
+      return createUserSession(user.id, redirectTo);
+    }
+    default: {
       return badRequest({
         fieldErrors: null,
         fields,
         formError: "Login type invalid",
       });
+    }
   }
 };
 
